@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% block title %}ZapFlow — Instâncias{% endblock %}
+{% block page_title %}Instâncias WhatsApp{% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-between mb-6">
+    <p class="text-dark-400 text-sm">Gerencie suas conexões WhatsApp</p>
+    <button onclick="document.getElementById('create-modal').classList.remove('hidden')"
+            class="px-4 py-2 bg-zap-500 hover:bg-zap-600 text-white text-sm font-medium rounded-lg transition-colors">
+        + Nova Instância
+    </button>
+</div>
+
+<div id="instances-list" hx-get="/api/instances/list-cards" hx-trigger="load, every 3s" hx-swap="morphdom:innerHTML" hx-ext="morphdom-swap">
+    <div class="flex items-center justify-center py-12">
+        <svg class="animate-spin w-6 h-6 text-dark-500" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+    </div>
+</div>
+
+<!-- Create Instance Modal -->
+<div id="create-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+    <div class="bg-dark-800 border border-dark-700 rounded-2xl p-6 w-full max-w-md mx-4">
+        <h3 class="text-lg font-semibold text-dark-100 mb-4">Nova Instância</h3>
+        <form id="create-instance-form" class="space-y-4">
+            <div>
+                <label class="block text-sm text-dark-300 mb-1">Nome da instância</label>
+                <input type="text" name="name" required pattern="[a-zA-Z0-9_-]+"
+                       class="w-full px-4 py-2.5 bg-dark-900 border border-dark-700 rounded-lg text-dark-100 focus:outline-none focus:ring-2 focus:ring-zap-500"
+                       placeholder="vendas-01">
+                <p class="text-xs text-dark-500 mt-1">Apenas letras, números, _ e -</p>
+            </div>
+            <div class="flex gap-3 justify-end">
+                <button type="button" onclick="document.getElementById('create-modal').classList.add('hidden')"
+                        class="px-4 py-2 text-sm text-dark-400 hover:text-dark-100 transition-colors">Cancelar</button>
+                <button type="submit" class="px-4 py-2 bg-zap-500 hover:bg-zap-600 text-white text-sm font-medium rounded-lg transition-colors">Criar</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Block poll swap while a details panel is open (panel state lives only in the DOM)
+document.body.addEventListener('htmx:beforeSwap', function(evt) {
+    if (evt.detail.target && evt.detail.target.id === 'instances-list') {
+        if (document.querySelector('[id^="diag-panel-"]:not(.hidden)')) {
+            evt.detail.shouldSwap = false;
+        }
+    }
+});
+
+document.getElementById('create-instance-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const name = e.target.name.value;
+    try {
+        const res = await fetch('/api/instances', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name })
+        });
+        if (res.ok) {
+            document.getElementById('create-modal').classList.add('hidden');
+            e.target.reset();
+            showToast('Instância criada! Gerando QR Code...', 'info');
+
+            // Immediate refresh
+            htmx.ajax('GET', '/api/instances/list-cards', {target: '#instances-list', swap: 'morphdom:innerHTML'});
+
+            // Aggressive polling: every 2s for 30s to quickly get QR
+            const listEl = document.getElementById('instances-list');
+            const originalTrigger = listEl.getAttribute('hx-trigger');
+            listEl.setAttribute('hx-trigger', 'load, every 2s');
+            htmx.process(listEl);
+
+            // Revert to normal polling after 30s
+            setTimeout(() => {
+                listEl.setAttribute('hx-trigger', originalTrigger);
+                htmx.process(listEl);
+            }, 30000);
+        } else {
+            const err = await res.json();
+            showToast(err.detail || 'Erro ao criar', 'error');
+        }
+    } catch { showToast('Erro de conexão', 'error'); }
+});
+</script>
+{% endblock %}

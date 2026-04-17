@@ -1,0 +1,83 @@
+<table class="w-full text-sm">
+    <thead>
+        <tr class="border-b border-dark-700 text-left">
+            <th class="px-5 py-3 text-xs font-medium text-dark-400 uppercase">Lead</th>
+            <th class="px-5 py-3 text-xs font-medium text-dark-400 uppercase">Campanha</th>
+            <th class="px-5 py-3 text-xs font-medium text-dark-400 uppercase">Step</th>
+            <th class="px-5 py-3 text-xs font-medium text-dark-400 uppercase">Status</th>
+            <th class="px-5 py-3 text-xs font-medium text-dark-400 uppercase">Interesse</th>
+            <th class="px-5 py-3 text-xs font-medium text-dark-400 uppercase">Última msg</th>
+            <th class="px-5 py-3 text-xs font-medium text-dark-400 uppercase"></th>
+        </tr>
+    </thead>
+    <tbody class="divide-y divide-dark-700">
+        {% for lead in leads %}
+        <tr class="hover:bg-dark-700/30 transition-colors">
+            <td class="px-5 py-3">
+                <div>
+                    <p class="font-medium text-dark-100">{{ lead.name or '—' }}</p>
+                    <p class="text-xs text-dark-500">{{ lead.phone }}</p>
+                </div>
+            </td>
+            <td class="px-5 py-3 text-dark-300">{{ lead.campaign_name }}</td>
+            <td class="px-5 py-3">
+                {% if lead.current_step == -1 %}
+                <span class="px-2 py-0.5 text-xs rounded bg-blue-500/20 text-blue-400">🤖 IA</span>
+                {% else %}
+                <span class="text-dark-300">Step {{ lead.current_step }}</span>
+                {% endif %}
+            </td>
+            <td class="px-5 py-3">
+                {% if lead.status == 'active' %}
+                <span class="px-2 py-0.5 text-xs rounded bg-zap-500/20 text-zap-400">Ativo</span>
+                {% elif lead.status == 'paused' %}
+                <span class="px-2 py-0.5 text-xs rounded bg-amber-500/20 text-amber-400">Pausado</span>
+                {% elif lead.status == 'completed' %}
+                <span class="px-2 py-0.5 text-xs rounded bg-dark-600 text-dark-400">Completo</span>
+                {% elif lead.status == 'blocked' %}
+                <span class="px-2 py-0.5 text-xs rounded bg-red-500/20 text-red-400">Bloqueado</span>
+                {% endif %}
+            </td>
+            <td class="px-5 py-3">
+                {% if lead.tab_interest_level == 'hot' %}
+                <span class="px-2 py-0.5 text-xs rounded bg-red-500/20 text-red-400">🔥 Hot</span>
+                {% elif lead.tab_interest_level == 'warm' %}
+                <span class="px-2 py-0.5 text-xs rounded bg-amber-500/20 text-amber-400">Warm</span>
+                {% elif lead.tab_interest_level == 'cold' %}
+                <span class="px-2 py-0.5 text-xs rounded bg-blue-500/20 text-blue-400">Cold</span>
+                {% elif lead.tab_interest_level == 'unresponsive' %}
+                <span class="px-2 py-0.5 text-xs rounded bg-dark-600 text-dark-400">—</span>
+                {% else %}
+                <span class="text-dark-600">—</span>
+                {% endif %}
+            </td>
+            <td class="px-5 py-3 text-xs text-dark-500 whitespace-nowrap">
+                {% if lead.last_message_at %}{{ lead.last_message_at|brtime }}{% else %}—{% endif %}
+            </td>
+            <td class="px-5 py-3 flex gap-3">
+                <a href="/leads/{{ lead.id }}" class="text-zap-500 hover:text-zap-400 text-xs font-medium">Ver</a>
+                <button hx-post="/api/leads/{{ lead.id }}/block" hx-confirm="Tem certeza que deseja bloquear este lead?" class="text-amber-500 hover:text-amber-400 text-xs font-medium">Bloquear</button>
+                <button hx-delete="/api/leads/{{ lead.id }}" hx-confirm="Tem certeza que deseja deletar este lead e suas mensagens?" class="text-red-500 hover:text-red-400 text-xs font-medium">Deletar</button>
+            </td>
+        </tr>
+        {% else %}
+        <tr>
+            <td colspan="7" class="px-5 py-12 text-center text-dark-500">Nenhum lead encontrado</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+{% if total_pages > 1 %}
+<div class="flex items-center justify-between px-5 py-3 border-t border-dark-700">
+    <p class="text-xs text-dark-500">{{ total_leads }} leads · Página {{ page }}/{{ total_pages }}</p>
+    <div class="flex gap-1">
+        {% if page > 1 %}
+        <button hx-get="/api/leads/table?page={{ page - 1 }}" hx-target="#leads-table" class="px-3 py-1 text-xs text-dark-400 bg-dark-700 rounded hover:bg-dark-600">←</button>
+        {% endif %}
+        {% if page < total_pages %}
+        <button hx-get="/api/leads/table?page={{ page + 1 }}" hx-target="#leads-table" class="px-3 py-1 text-xs text-dark-400 bg-dark-700 rounded hover:bg-dark-600">→</button>
+        {% endif %}
+    </div>
+</div>
+{% endif %}

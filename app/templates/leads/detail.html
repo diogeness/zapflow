@@ -1,0 +1,139 @@
+{% extends "base.html" %}
+{% block title %}ZapFlow — {{ lead.name or lead.phone }}{% endblock %}
+{% block page_title %}
+<div class="flex items-center gap-2">
+    <a href="/leads" class="text-dark-400 hover:text-dark-200">Leads</a>
+    <span class="text-dark-600">/</span>
+    <span>{{ lead.name or lead.phone }}</span>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <!-- Lead Info -->
+    <div class="lg:col-span-1 space-y-4">
+        <div class="bg-dark-800 border border-dark-700 rounded-xl p-5">
+            <h3 class="font-semibold text-dark-100 mb-4">Informações</h3>
+            <dl class="space-y-3 text-sm">
+                <div>
+                    <dt class="text-dark-500">Nome</dt>
+                    <dd class="text-dark-200 font-medium">{{ lead.name or '—' }}</dd>
+                </div>
+                <div>
+                    <dt class="text-dark-500">Telefone</dt>
+                    <dd class="text-dark-200">{{ lead.phone }}</dd>
+                </div>
+                <div>
+                    <dt class="text-dark-500">Campanha</dt>
+                    <dd class="text-dark-200">{{ campaign_name }}</dd>
+                </div>
+                <div>
+                    <dt class="text-dark-500">Fase</dt>
+                    <dd>
+                        {% if lead.current_step == -1 %}
+                        <span class="px-2 py-0.5 text-xs rounded bg-blue-500/20 text-blue-400">🤖 Fase IA</span>
+                        {% else %}
+                        <span class="text-dark-200">Step {{ lead.current_step }}</span>
+                        {% endif %}
+                    </dd>
+                </div>
+                <div>
+                    <dt class="text-dark-500">Status</dt>
+                    <dd>
+                        {% if lead.status == 'active' %}
+                        <span class="px-2 py-0.5 text-xs rounded bg-zap-500/20 text-zap-400">Ativo</span>
+                        {% elif lead.status == 'paused' %}
+                        <span class="px-2 py-0.5 text-xs rounded bg-amber-500/20 text-amber-400">Pausado</span>
+                        {% elif lead.status == 'blocked' %}
+                        <span class="px-2 py-0.5 text-xs rounded bg-red-500/20 text-red-400">🚫 Bloqueado</span>
+                        {% else %}
+                        <span class="px-2 py-0.5 text-xs rounded bg-dark-600 text-dark-400">{{ lead.status }}</span>
+                        {% endif %}
+                    </dd>
+                </div>
+                {% if lead.tab_interest_level %}
+                <div>
+                    <dt class="text-dark-500">Interesse</dt>
+                    <dd>
+                        {% if lead.tab_interest_level == 'hot' %}
+                        <span class="px-2 py-0.5 text-xs rounded bg-red-500/20 text-red-400">🔥 Hot</span>
+                        {% elif lead.tab_interest_level == 'warm' %}
+                        <span class="px-2 py-0.5 text-xs rounded bg-amber-500/20 text-amber-400">Warm</span>
+                        {% elif lead.tab_interest_level == 'cold' %}
+                        <span class="px-2 py-0.5 text-xs rounded bg-blue-500/20 text-blue-400">Cold</span>
+                        {% else %}
+                        <span class="text-dark-400">{{ lead.tab_interest_level }}</span>
+                        {% endif %}
+                    </dd>
+                </div>
+                {% endif %}
+            </dl>
+
+            <div class="mt-4 pt-4 border-t border-dark-700 flex gap-2">
+                {% if lead.status == 'blocked' %}
+                <button hx-patch="/api/leads/{{ lead.id }}" hx-vals='{"status":"active"}' hx-swap="none"
+                        onclick="if(confirm('Desbloquear este lead?')){showToast('Lead desbloqueado'); setTimeout(()=>location.reload(),500)}"
+                        class="flex-1 px-3 py-2 text-xs font-medium text-zap-400 border border-zap-500/30 rounded-lg hover:bg-zap-500/10 transition-colors text-center">
+                    ✅ Desbloquear
+                </button>
+                {% else %}
+                {% if lead.status == 'active' %}
+                <button hx-patch="/api/leads/{{ lead.id }}" hx-vals='{"status":"paused"}' hx-swap="none"
+                        onclick="showToast('Lead pausado','warning'); setTimeout(()=>location.reload(),500)"
+                        class="flex-1 px-3 py-2 text-xs font-medium text-amber-400 border border-amber-500/30 rounded-lg hover:bg-amber-500/10 transition-colors text-center">
+                    ⏸ Pausar
+                </button>
+                {% elif lead.status == 'paused' %}
+                <button hx-patch="/api/leads/{{ lead.id }}" hx-vals='{"status":"active"}' hx-swap="none"
+                        onclick="showToast('Lead reativado'); setTimeout(()=>location.reload(),500)"
+                        class="flex-1 px-3 py-2 text-xs font-medium text-zap-400 border border-zap-500/30 rounded-lg hover:bg-zap-500/10 transition-colors text-center">
+                    ▶ Retomar
+                </button>
+                {% endif %}
+                <button hx-post="/api/leads/{{ lead.id }}/block" hx-swap="none"
+                        onclick="if(!confirm('Bloquear este lead? Ele deixará de receber mensagens automáticas.')){event.preventDefault()}"
+                        class="px-3 py-2 text-xs font-medium text-red-400 border border-red-500/30 rounded-lg hover:bg-red-500/10 transition-colors">
+                    🚫 Bloquear
+                </button>
+                {% endif %}
+            </div>
+        </div>
+
+        {% if lead.tabulation %}
+        <div class="bg-dark-800 border border-dark-700 rounded-xl p-5">
+            <h3 class="font-semibold text-dark-100 mb-2">Tabulação</h3>
+            <p class="text-sm text-dark-300">{{ lead.tabulation }}</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Chat History -->
+    <div class="lg:col-span-2">
+        <div class="bg-dark-800 border border-dark-700 rounded-xl flex flex-col" style="height: 70vh;">
+            <div class="px-5 py-3 border-b border-dark-700">
+                <h3 class="font-semibold text-dark-100">Histórico</h3>
+            </div>
+            <div id="chat-messages" class="flex-1 overflow-y-auto p-4 space-y-3" hx-get="/api/leads/{{ lead.id }}/messages" hx-trigger="load, every 5s" hx-swap="innerHTML">
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Auto-scroll to bottom when messages load
+document.body.addEventListener('htmx:afterSwap', function(evt) {
+    if (evt.detail.target.id === 'chat-messages') {
+        evt.detail.target.scrollTop = evt.detail.target.scrollHeight;
+    }
+});
+// Reload page after block/unblock actions to reflect new status
+document.body.addEventListener('htmx:afterRequest', function(evt) {
+    const path = evt.detail.pathInfo?.requestPath || '';
+    if (path.includes('/block') || (evt.detail.verb === 'patch' && path.includes('/api/leads/'))) {
+        setTimeout(() => location.reload(), 600);
+    }
+});
+</script>
+{% endblock %}

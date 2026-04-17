@@ -1,0 +1,24 @@
+{
+  "name": "zapflow-whatsapp-service",
+  "version": "1.0.0",
+  "description": "WhatsApp microservice using Baileys for ZapFlow",
+  "main": "dist/index.js",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "tsc --watch & node --watch dist/index.js"
+  },
+  "dependencies": {
+    "@whiskeysockets/baileys": "^6.7.16",
+    "express": "^4.21.2",
+    "pino": "^9.6.0",
+    "qrcode": "^1.5.4"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.0",
+    "@types/node": "^22.13.10",
+    "@types/qrcode": "^1.5.5",
+    "typescript": "^5.7.3"
+  }
+}

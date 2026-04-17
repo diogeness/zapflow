@@ -1,0 +1,737 @@
+{% extends "base.html" %}
+{% block title %}ZapFlow — {{ campaign.name }}{% endblock %}
+{% block page_title %}{{ campaign.name }}{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto">
+    <!-- Campaign Header -->
+    <div class="flex items-center justify-between mb-6">
+        <div class="flex items-center gap-3">
+            <a href="/campaigns" class="p-2 text-dark-400 hover:text-dark-100 hover:bg-dark-700 rounded-lg transition-colors" title="Voltar">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+            </a>
+            <div>
+                <h2 class="text-lg font-semibold text-dark-100">{{ campaign.name }}</h2>
+                <p class="text-xs text-dark-400">Instância: {{ instance_name }}</p>
+            </div>
+        </div>
+        <div class="flex items-center gap-2">
+            {% if campaign.is_active %}
+            <span class="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-medium rounded-full bg-zap-500/10 text-zap-400 border border-zap-500/20">
+                <span class="w-1.5 h-1.5 bg-zap-400 rounded-full animate-pulse"></span>
+                Campanha Ativa
+            </span>
+            {% else %}
+            <span class="px-3 py-1 text-xs font-medium rounded-full bg-dark-700 text-dark-400">Campanha Inativa</span>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        
+        <!-- Left Column: Steps Editor Section -->
+        <div class="lg:col-span-7 xl:col-span-8 mb-8 lg:mb-0">
+            <div class="bg-dark-800 border border-dark-700 rounded-xl overflow-hidden">
+                <div class="flex items-center justify-between p-5 border-b border-dark-700">
+                    <div class="flex items-center gap-3">
+                        <div class="p-2 bg-dark-700 rounded-lg">
+                            <svg class="w-4 h-4 text-dark-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg>
+                        </div>
+                        <div>
+                            <h3 class="font-semibold text-dark-100">Roteiro Fixo</h3>
+                            <p class="text-xs text-dark-500">{{ steps|length }} step{{ 's' if steps|length != 1 }} · Após o roteiro → {% if campaign.ai_enabled %}IA assume{% else %}sem IA{% endif %}</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="steps-container" class="p-5 space-y-3">
+                    {% for step in steps %}
+                    <div class="step-item bg-dark-900 border border-dark-700 rounded-lg p-4 cursor-move hover:border-dark-600 transition-colors" data-step-id="{{ step.id }}" data-step-order="{{ loop.index0 }}">
+                        <div class="flex items-start gap-3">
+                            <div class="mt-1 text-dark-600 cursor-grab active:cursor-grabbing hover:text-dark-400 transition-colors">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16"/></svg>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-center gap-2 mb-2 flex-wrap">
+                                    <span class="step-number text-xs font-bold text-dark-500 bg-dark-800 rounded px-1.5 py-0.5">#{{ loop.index }}</span>
+                                    <span class="text-xs font-medium px-2 py-0.5 rounded
+                                        {% if step.message_type == 'text' %}bg-blue-500/15 text-blue-400
+                                        {% elif step.message_type == 'image' %}bg-purple-500/15 text-purple-400
+                                        {% elif step.message_type == 'video' %}bg-pink-500/15 text-pink-400
+                                        {% elif step.message_type == 'document' %}bg-amber-500/15 text-amber-400
+                                        {% elif step.message_type == 'audio_ptt' %}bg-red-500/15 text-red-400
+                                        {% endif %}">
+                                        {% if step.message_type == 'text' %}💬 Texto{% elif step.message_type == 'image' %}🖼️ Imagem{% elif step.message_type == 'video' %}🎬 Vídeo{% elif step.message_type == 'document' %}📄 Documento{% elif step.message_type == 'audio_ptt' %}🎤 Áudio PTT{% endif %}
+                                    </span>
+                                    <span class="text-xs text-dark-500">⏱ {{ step.delay_seconds }}s</span>
+                                    {% if step.wait_reply %}
+                                    <span class="text-xs text-amber-500 flex items-center gap-0.5 bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/20" title="Condição: Aguardar mensagem do lead">
+                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                        Aguarda msg do lead
+                                    </span>
+                                    {% endif %}
+                                    {% if step.view_once %}
+                                    <span class="text-xs text-cyan-400 flex items-center gap-0.5 bg-cyan-500/10 px-1.5 py-0.5 rounded border border-cyan-500/20" title="Visualização única">
+                                        👁 Vis. única
+                                    </span>
+                                    {% endif %}
+                                    {% if loop.index0 == 0 %}
+                                    <span class="text-xs text-zap-500/70 bg-zap-500/10 px-1.5 py-0.5 rounded border border-zap-500/20">1° step</span>
+                                    {% endif %}
+                                </div>
+                                <p class="text-sm text-dark-300">{{ step.content[:200] }}{{ '...' if step.content|length > 200 }}</p>
+                                {% if step.media_urls %}
+                                {% set media_list = step.media_urls | tojson | safe %}
+                                <div class="mt-1.5 space-y-1">
+                                    {% for entry in step.media_urls_parsed %}
+                                    <p class="text-xs text-dark-400 flex items-center gap-1">
+                                        <svg class="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/></svg>
+                                        <span class="truncate max-w-[200px]" title="{{ entry.name }}">{{ entry.name }}</span>
+                                    </p>
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+                            </div>
+                            <div class="flex items-center gap-1 flex-shrink-0">
+                                <button onclick="openEditStep(this)" data-step-id="{{ step.id }}" data-step-content="{{ step.content | e }}" data-step-delay="{{ step.delay_seconds }}" data-step-wait="{{ 'true' if step.wait_reply else 'false' }}" data-step-order="{{ loop.index0 }}" data-step-media="{{ step.media_urls or '[]' }}" data-step-type="{{ step.message_type }}" data-step-viewonce="{{ 'true' if step.view_once else 'false' }}" class="p-1.5 text-dark-500 hover:text-blue-400 hover:bg-blue-500/10 rounded-lg transition-colors" title="Editar step">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                                </button>
+                                <button onclick="deleteStep({{ step.id }})" class="p-1.5 text-dark-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors" title="Excluir step">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-6 text-dark-400 text-sm">Nenhum step configurado. O funil enviará diretamente para a IA (caso haja um model configurado).</div>
+                    {% endfor %}
+                </div>
+
+                <!-- Add Step Form -->
+                <div class="px-5 pb-5 pt-4 border-t border-dark-700 bg-dark-800/50">
+                    <h4 class="text-sm font-medium text-dark-200 mb-3 flex items-center gap-2">
+                        <svg class="w-4 h-4 text-dark-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                        Adicionar Novo Step
+                    </h4>
+                    <form id="add-step-form" class="space-y-4">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-medium text-dark-400 mb-1.5">Tipo de Mensagem</label>
+                                <select name="message_type" class="w-full px-3 py-2 bg-dark-900 border border-dark-700 rounded-lg text-dark-100 text-sm focus:outline-none focus:ring-2 focus:ring-zap-500">
+                                    <option value="text">💬 Texto</option>
+                                    <option value="image">🖼️ Imagem</option>
+                                    <option value="video">🎬 Vídeo</option>
+                                    <option value="document">📄 Documento</option>
+                                    <option value="audio_ptt">🎤 Áudio PTT</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-dark-400 mb-1.5">Atraso antes do envio</label>
+                                <div class="flex items-center gap-2">
+                                    <div class="flex items-center gap-1.5 relative flex-1">
+                                        <svg class="w-4 h-4 text-dark-500 absolute left-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                        <input type="number" name="delay_seconds" value="3" min="1" max="60"
+                                               class="w-full pl-8 pr-3 py-2 bg-dark-900 border border-dark-700 rounded-lg text-dark-100 text-sm focus:outline-none focus:ring-2 focus:ring-zap-500"
+                                               title="Delay em segundos">
+                                    </div>
+                                    <span class="text-xs text-dark-500">s</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="p-3 bg-dark-900 border border-dark-700 rounded-lg">
+                            <label class="flex items-start gap-3 cursor-pointer group">
+                                <div class="mt-0.5 flex-shrink-0">
+                                    <input type="checkbox" name="wait_reply" class="w-4 h-4 rounded border-dark-600 text-zap-500 focus:ring-zap-500 bg-dark-800">
+                                </div>
+                                <div>
+                                    <p class="text-sm font-medium text-dark-200 group-hover:text-dark-100 transition-colors">Aguardar mensagem do lead antes de enviar</p>
+                                    <p class="text-xs text-dark-400 mt-0.5 leading-relaxed">Se ativado, este step só será enviado se e quando o lead responder.</p>
+                                </div>
+                            </label>
+                        </div>
+
+                        <div id="ptt-hint" class="hidden p-3 bg-red-500/5 border border-red-500/20 rounded-lg">
+                            <p class="text-xs text-red-400">🎤 <strong>Atenção:</strong> Formatos aceitos para PTT são <strong>.ogg (Opus)</strong>. Outros formatos podem falhar.</p>
+                        </div>
+
+                        <div id="view-once-area" class="hidden">
+                            <div class="p-3 bg-dark-900 border border-dark-700 rounded-lg">
+                                <label class="flex items-start gap-3 cursor-pointer group">
+                                    <div class="mt-0.5 flex-shrink-0">
+                                        <input type="checkbox" name="view_once" class="w-4 h-4 rounded border-dark-600 text-zap-500 focus:ring-zap-500 bg-dark-800">
+                                    </div>
+                                    <div>
+                                        <p class="text-sm font-medium text-dark-200 group-hover:text-dark-100 transition-colors">👁 Visualização única</p>
+                                        <p class="text-xs text-dark-400 mt-0.5 leading-relaxed">A mídia só poderá ser vista uma vez pelo destinatário, como fotos/vídeos temporários do WhatsApp.</p>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-xs font-medium text-dark-400 mb-1.5">Conteúdo / Legenda</label>
+                            <textarea name="content" rows="2" placeholder="Digite o texto ou legenda aqui..."
+                                      class="w-full px-4 py-2 bg-dark-900 border border-dark-700 rounded-lg text-dark-100 text-sm focus:outline-none focus:ring-2 focus:ring-zap-500 focus:border-transparent resize-y min-h-[80px]"></textarea>
+                            <div class="mt-1.5 flex items-center justify-between">
+                                <p class="text-[11px] text-dark-500"><strong>Variáveis dinâmicas:</strong> <code class="text-zap-400 bg-zap-500/10 px-1 rounded">{nome}</code> <code class="text-zap-400 bg-zap-500/10 px-1 rounded">{telefone}</code> <code class="text-zap-400 bg-zap-500/10 px-1 rounded">{campanha}</code></p>
+                            </div>
+                        </div>
+                        
+                        <div id="media-upload-area" class="hidden">
+                            <label class="block text-xs font-medium text-dark-400 mb-1.5">Mídia Anexada</label>
+                            <input type="file" name="media" id="media-file" multiple
+                                class="w-full text-sm text-dark-400 file:mr-4 file:py-2.5 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-dark-700 file:text-dark-200 hover:file:bg-dark-600 file:cursor-pointer file:transition-colors bg-dark-900 border border-dark-700 rounded-lg">
+                            <p class="text-[11px] text-dark-500 mt-1">Você pode selecionar múltiplos arquivos de uma vez.</p>
+                        </div>
+                        
+                        <div class="pt-2">
+                            <button type="submit" id="add-step-btn" class="w-full py-2.5 bg-dark-700 hover:bg-dark-600 text-dark-200 text-sm font-medium rounded-lg transition-colors flex items-center justify-center gap-2">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                                Adicionar Step ao Roteiro
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column: Settings Section -->
+        <div class="lg:col-span-5 xl:col-span-4 flex flex-col gap-6">
+            
+            <div class="bg-gradient-to-br from-zap-500/10 to-blue-500/5 border border-zap-500/20 rounded-xl p-5 relative overflow-hidden">
+                <div class="absolute -right-4 -top-4 text-zap-500/10">
+                    <svg class="w-24 h-24" fill="currentColor" viewBox="0 0 24 24"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.36 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM14 13v4h-4v-4H7l5-5 5 5h-3z"/></svg>
+                </div>
+                <div class="relative z-10">
+                    <h3 class="font-semibold text-zap-400 flex items-center gap-2 mb-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                        Fase: Inteligência Artificial
+                    </h3>
+                    <p class="text-xs text-dark-300 leading-relaxed">
+                        Ao término do seu roteiro fixo, a IA entra em ação para responder objeções, tirar dúvidas e humanizar o papo passivamente.
+                        {% if not campaign.ai_enabled %}<br><span class="text-amber-400 font-medium">⚠ IA desativada para esta campanha.</span>{% endif %}
+                        {% if campaign.max_ai_interactions > 0 %}<br><span class="text-dark-400">Limite: {{ campaign.max_ai_interactions }} interações por lead.</span>{% endif %}
+                    </p>
+                </div>
+            </div>
+
+            <div class="bg-dark-800 border border-dark-700 rounded-xl overflow-hidden">
+                <div class="flex items-center gap-3 p-5 border-b border-dark-700">
+                    <div class="p-2 bg-dark-700 rounded-lg">
+                        <svg class="w-4 h-4 text-dark-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                    </div>
+                    <h3 class="font-semibold text-dark-100">Configurações Base</h3>
+                </div>
+                
+                <form id="campaign-settings" class="px-5 py-5 space-y-5">
+                    <div>
+                        <label class="block text-sm font-medium text-dark-300 mb-1.5">Nome da Campanha</label>
+                        <input type="text" name="name" value="{{ campaign.name }}"
+                               class="w-full px-4 py-2.5 bg-dark-900 border border-dark-700 rounded-lg text-dark-100 focus:outline-none focus:ring-2 focus:ring-zap-500 focus:border-transparent">
+                    </div>
+                    
+                    <div class="border-t border-dark-700/50 pt-5">
+                        <label class="block text-sm font-medium text-dark-300 mb-1.5">System Prompt (Instruções para a IA)</label>
+                        <textarea name="system_prompt" rows="5"
+                                  class="w-full px-4 py-3 bg-dark-900 border border-dark-700 rounded-lg text-dark-100 focus:outline-none focus:ring-2 focus:ring-zap-500 focus:border-transparent resize-y min-h-[100px] text-sm leading-relaxed" placeholder="Você é o atendente virtual focado em vendar...">{{ campaign.system_prompt }}</textarea>
+                    </div>
+                    
+                    <div class="border-t border-dark-700/50 pt-5">
+                        <label class="block text-sm font-medium text-dark-300 mb-1.5">Material de apoio (RAG Base de Conhecimento)</label>
+                        <div class="flex flex-col gap-3">
+                            <div class="flex items-center gap-2">
+                                <input type="file" id="context-file" accept=".txt,.md,.csv,.pdf,.doc,.docx"
+                                       class="flex-1 text-sm text-dark-400 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-medium file:bg-dark-700 file:text-dark-300 hover:file:bg-dark-600 file:cursor-pointer file:transition-colors bg-dark-900 border border-dark-700 rounded-lg p-1">
+                                <button type="button" onclick="uploadContextFile()"
+                                        class="px-3 py-2.5 bg-dark-700 hover:bg-dark-600 text-dark-200 text-sm font-medium rounded-lg transition-colors whitespace-nowrap">Upload</button>
+                            </div>
+                            
+                            {% if campaign.context_file %}
+                            <div class="flex items-center justify-between p-3 bg-zap-500/10 border border-zap-500/20 rounded-lg">
+                                <div class="flex items-center gap-2">
+                                    <svg class="w-4 h-4 text-zap-400" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                                    <div class="text-xs text-zap-400 font-medium truncate max-w-[150px]" title="{{ campaign.context_file.split('/')[-1] }}">
+                                        {{ campaign.context_file.split('/')[-1] }}
+                                    </div>
+                                </div>
+                                <button type="button" onclick="deleteContextFile()" class="p-1 text-red-400 hover:bg-red-400/20 rounded-md transition-colors" title="Remover">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                                </button>
+                            </div>
+                            {% endif %}
+                            <p class="text-xs text-dark-500">A IA lerá este arquivo. Aceitamos: .txt, .md, .csv, .pdf, .doc, .docx.</p>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4 border-t border-dark-700/50 pt-5">
+                        <div>
+                            <label class="block text-xs font-medium text-dark-400 mb-1.5">Modelo IA</label>
+                            <select name="ai_model" class="w-full px-3 py-2.5 bg-dark-900 border border-dark-700 rounded-lg text-dark-100 text-sm focus:outline-none focus:ring-2 focus:ring-zap-500">
+                                <option value="llama-3.1-8b-instant" {% if campaign.ai_model == 'llama-3.1-8b-instant' %}selected{% endif %}>Llama 3.1 8B (rápido)</option>
+                                <option value="llama-3.3-70b-versatile" {% if campaign.ai_model == 'llama-3.3-70b-versatile' %}selected{% endif %}>Llama 3.3 70B (melhor)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-dark-400 mb-1.5">Criatividade/Temp</label>
+                            <input type="number" name="ai_temperature" value="{{ campaign.ai_temperature }}" min="0" max="2" step="0.1"
+                                   class="w-full px-3 py-2.5 bg-dark-900 border border-dark-700 rounded-lg text-dark-100 text-sm focus:outline-none focus:ring-2 focus:ring-zap-500">
+                        </div>
+                    </div>
+
+                    <div class="border-t border-dark-700/50 pt-5">
+                        <h4 class="text-sm font-medium text-dark-300 mb-3 flex items-center gap-2">
+                            <svg class="w-4 h-4 text-dark-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/></svg>
+                            Filtros de Destinatário
+                        </h4>
+                        <div class="space-y-3">
+                            <div class="p-3 bg-dark-900 border border-dark-700 rounded-lg">
+                                <label class="flex items-start gap-3 cursor-pointer group">
+                                    <div class="mt-0.5 flex-shrink-0">
+                                        <input type="checkbox" name="ignore_groups" {% if campaign.ignore_groups %}checked{% endif %}
+                                               class="w-4 h-4 rounded border-dark-600 text-zap-500 focus:ring-zap-500 bg-dark-800">
+                                    </div>
+                                    <div>
+                                        <p class="text-sm font-medium text-dark-200 group-hover:text-dark-100 transition-colors">Ignorar mensagens de grupos</p>
+                                        <p class="text-xs text-dark-400 mt-0.5">O bot não responderá a mensagens vindas de grupos do WhatsApp.</p>
+                                    </div>
+                                </label>
+                            </div>
+                            <div class="p-3 bg-dark-900 border border-dark-700 rounded-lg">
+                                <label class="flex items-start gap-3 cursor-pointer group">
+                                    <div class="mt-0.5 flex-shrink-0">
+                                        <input type="checkbox" name="ignore_contacts" {% if campaign.ignore_contacts %}checked{% endif %}
+                                               class="w-4 h-4 rounded border-dark-600 text-zap-500 focus:ring-zap-500 bg-dark-800">
+                                    </div>
+                                    <div>
+                                        <p class="text-sm font-medium text-dark-200 group-hover:text-dark-100 transition-colors">Ignorar contatos salvos na agenda</p>
+                                        <p class="text-xs text-dark-400 mt-0.5">O bot ignorará números da agenda do aparelho, permitindo uso pessoal sem interferência.</p>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="border-t border-dark-700/50 pt-5">
+                        <h4 class="text-sm font-medium text-dark-300 mb-3 flex items-center gap-2">
+                            <svg class="w-4 h-4 text-dark-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>
+                            Controle da IA
+                        </h4>
+                        <div class="space-y-3">
+                            <div class="p-3 bg-dark-900 border border-dark-700 rounded-lg">
+                                <label class="flex items-start gap-3 cursor-pointer group">
+                                    <div class="mt-0.5 flex-shrink-0">
+                                        <input type="checkbox" name="ai_enabled" {% if campaign.ai_enabled %}checked{% endif %}
+                                               class="w-4 h-4 rounded border-dark-600 text-zap-500 focus:ring-zap-500 bg-dark-800">
+                                    </div>
+                                    <div>
+                                        <p class="text-sm font-medium text-dark-200 group-hover:text-dark-100 transition-colors">Ativar IA após roteiro fixo</p>
+                                        <p class="text-xs text-dark-400 mt-0.5">Se desativado, o bot só envia os steps fixos e depois para de responder.</p>
+                                    </div>
+                                </label>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-dark-400 mb-1.5">Máximo de interações da IA por lead</label>
+                                <div class="flex items-center gap-2">
+                                    <input type="number" name="max_ai_interactions" value="{{ campaign.max_ai_interactions }}" min="0" max="999"
+                                           class="w-full px-3 py-2.5 bg-dark-900 border border-dark-700 rounded-lg text-dark-100 text-sm focus:outline-none focus:ring-2 focus:ring-zap-500">
+                                </div>
+                                <p class="text-xs text-dark-500 mt-1">0 = sem limite. Após atingir o máximo, as mensagens do lead são salvas mas a IA não responde mais.</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="pt-2">
+                        <button type="button" onclick="saveCampaignSettings(this)"
+                                class="w-full py-2.5 bg-zap-500 hover:bg-zap-600 text-white text-sm font-medium rounded-lg transition-all flex items-center justify-center gap-2 shadow-[0_0_15px_rgba(34,197,94,0.2)]">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                            Salvar Configurações Gerais
+                        </button>
+                    </div>
+                </form>
+            </div>
+            
+        </div>
+    </div>
+</div>
+
+<!-- Edit Step Modal -->
+<div id="edit-step-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+    <div class="bg-dark-800 border border-dark-700 rounded-2xl p-6 w-full max-w-lg mx-4 shadow-2xl">
+        <h3 class="text-lg font-semibold text-dark-100 mb-4">Editar Roteiro Fixo</h3>
+        <form id="edit-step-form" class="space-y-4">
+            <input type="hidden" id="edit-step-id">
+            <input type="hidden" id="edit-step-type">
+            <div>
+                <label class="block text-sm font-medium text-dark-300 mb-1.5">Conteúdo / Legenda</label>
+                <textarea id="edit-step-content" rows="4"
+                          class="w-full px-4 py-2.5 bg-dark-900 border border-dark-700 rounded-lg text-dark-100 focus:outline-none focus:ring-2 focus:ring-zap-500 focus:border-transparent resize-y min-h-[80px] text-sm"></textarea>
+                <div class="p-2 mt-2 bg-dark-900/50 border border-dark-700 rounded-lg">
+                    <p class="text-xs text-dark-400">📝 <strong>Variáveis:</strong>
+                        <code class="text-zap-400">{nome}</code> &nbsp;|&nbsp;
+                        <code class="text-zap-400">{telefone}</code> &nbsp;|&nbsp;
+                        <code class="text-zap-400">{campanha}</code>
+                    </p>
+                </div>
+            </div>
+
+            <!-- Existing media files -->
+            <div id="edit-media-section" class="hidden">
+                <label class="block text-xs font-medium text-dark-400 mb-1.5">Arquivos Anexados</label>
+                <div id="edit-media-list" class="space-y-1.5 mb-2"></div>
+                <div class="mt-2">
+                    <label class="block text-xs text-dark-500 mb-1">Adicionar mais arquivos:</label>
+                    <input type="file" id="edit-media-file" multiple
+                        class="w-full text-sm text-dark-400 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-medium file:bg-dark-700 file:text-dark-300 hover:file:bg-dark-600 file:cursor-pointer file:transition-colors bg-dark-900 border border-dark-700 rounded-lg">
+                </div>
+            </div>
+            
+            <div id="edit-view-once-area" class="hidden">
+                <div class="p-3 bg-dark-900 border border-dark-700 rounded-lg mb-2">
+                    <label class="flex items-start gap-3 cursor-pointer group">
+                        <div class="mt-0.5 flex-shrink-0">
+                            <input type="checkbox" id="edit-step-viewonce" class="w-4 h-4 rounded border-dark-600 text-zap-500 focus:ring-zap-500 bg-dark-800">
+                        </div>
+                        <div>
+                            <p class="text-sm font-medium text-dark-200 group-hover:text-dark-100 transition-colors">👁 Visualização única</p>
+                            <p class="text-xs text-dark-400 mt-0.5 leading-relaxed">A mídia só poderá ser vista uma vez pelo destinatário.</p>
+                        </div>
+                    </label>
+                </div>
+            </div>
+
+            <div class="p-3 bg-dark-900 border border-dark-700 rounded-lg mb-2">
+                <label class="flex items-start gap-3 cursor-pointer group">
+                    <div class="mt-0.5 flex-shrink-0">
+                        <input type="checkbox" id="edit-step-wait" class="w-4 h-4 rounded border-dark-600 text-zap-500 focus:ring-zap-500 bg-dark-800">
+                    </div>
+                    <div>
+                        <p class="text-sm font-medium text-dark-200 group-hover:text-dark-100 transition-colors">Aguardar mensagem do lead antes de enviar</p>
+                        <p class="text-xs text-dark-400 mt-0.5">Impede o envio até que o usuário responda ativamente.</p>
+                    </div>
+                </label>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-medium text-dark-400 mb-1.5">Atraso simulado (segundos)</label>
+                    <input type="number" id="edit-step-delay" min="1" max="60"
+                           class="w-full px-4 py-2.5 bg-dark-900 border border-dark-700 rounded-lg text-dark-100 focus:outline-none focus:ring-2 focus:ring-zap-500 text-sm">
+                </div>
+                <div class="flex justify-end items-end pb-1 gap-2 border-t pt-4 border-transparent">
+                    <button type="button" onclick="closeEditStep()"
+                            class="px-4 py-2 text-sm text-dark-400 hover:text-dark-100 transition-colors rounded-lg hover:bg-dark-700 border border-transparent">Cancelar</button>
+                    <button type="submit" id="edit-save-btn"
+                            class="px-5 py-2.5 bg-zap-500 hover:bg-zap-600 text-white text-sm font-medium rounded-lg transition-colors flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                        Salvar Edição
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const CAMPAIGN_ID = {{ campaign.id }};
+
+// Show/hide media upload and PTT hint
+document.querySelector('[name="message_type"]').addEventListener('change', function() {
+    const isText = this.value === 'text';
+    const isPtt = this.value === 'audio_ptt';
+    const isMediaViewOnce = this.value === 'image' || this.value === 'video';
+    document.getElementById('media-upload-area').classList.toggle('hidden', isText);
+    document.getElementById('ptt-hint').classList.toggle('hidden', !isPtt);
+    document.getElementById('view-once-area').classList.toggle('hidden', !isMediaViewOnce);
+    if (!isMediaViewOnce) {
+        document.querySelector('[name="view_once"]').checked = false;
+    }
+});
+
+// ── Sortable for steps (drag-and-drop reorder) ──
+if (document.getElementById('steps-container')) {
+    new Sortable(document.getElementById('steps-container'), {
+        animation: 200,
+        handle: '.cursor-grab',
+        ghostClass: 'opacity-30',
+        chosenClass: 'border-zap-500/50',
+        onEnd: async function(evt) {
+            if (!confirm('Confirmar nova ordem dos steps?')) {
+                // Revert by reloading
+                window.location.reload();
+                return;
+            }
+            const items = [...document.querySelectorAll('.step-item')];
+            const ids = items.map(el => parseInt(el.dataset.stepId));
+            try {
+                const res = await fetch(`/api/campaigns/${CAMPAIGN_ID}/steps/reorder`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ step_ids: ids })
+                });
+                if (res.ok) {
+                    // Update step number badges
+                    items.forEach((el, idx) => {
+                        const badge = el.querySelector('.step-number');
+                        if (badge) badge.textContent = `#${idx + 1}`;
+                    });
+                    showToast('Ordem atualizada!');
+                } else {
+                    showToast('Erro ao reordenar', 'error');
+                    window.location.reload();
+                }
+            } catch (err) {
+                showToast('Erro de conexão', 'error');
+                window.location.reload();
+            }
+        }
+    });
+}
+
+// ── Campaign Settings ──
+async function saveCampaignSettings(btn) {
+    const originalText = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<svg class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg> Salvando...';
+
+    const form = document.getElementById('campaign-settings');
+    const data = {
+        name: form.querySelector('[name="name"]').value,
+        system_prompt: form.querySelector('[name="system_prompt"]').value,
+        ai_model: form.querySelector('[name="ai_model"]').value,
+        ai_temperature: parseFloat(form.querySelector('[name="ai_temperature"]').value),
+        ignore_groups: form.querySelector('[name="ignore_groups"]').checked,
+        ignore_contacts: form.querySelector('[name="ignore_contacts"]').checked,
+        ai_enabled: form.querySelector('[name="ai_enabled"]').checked,
+        max_ai_interactions: parseInt(form.querySelector('[name="max_ai_interactions"]').value) || 0,
+    };
+    const res = await fetch(`/api/campaigns/${CAMPAIGN_ID}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+    });
+
+    if (res.ok) {
+        btn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> Salvo!';
+        showToast('Configurações salvas!');
+    } else {
+        showToast('Erro ao salvar', 'error');
+    }
+
+    setTimeout(() => {
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+    }, 1500);
+}
+
+// ── Add Step Form ──
+document.getElementById('add-step-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const f = e.target;
+    const btn = document.getElementById('add-step-btn');
+    btn.disabled = true;
+    btn.innerHTML = '<svg class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg> Adicionando...';
+
+    const formData = new FormData();
+    formData.append('message_type', f.message_type.value);
+    formData.append('content', f.content.value);
+    formData.append('delay_seconds', f.delay_seconds.value);
+    formData.append('wait_reply', f.wait_reply.checked);
+    formData.append('view_once', f.view_once.checked);
+
+    const mediaFiles = document.getElementById('media-file').files;
+    for (let i = 0; i < mediaFiles.length; i++) {
+        formData.append('media', mediaFiles[i]);
+    }
+
+    const res = await fetch(`/api/campaigns/${CAMPAIGN_ID}/steps`, {
+        method: 'POST',
+        body: formData
+    });
+    if (res.ok) {
+        showToast('Step adicionado!');
+        window.location.reload();
+    } else {
+        const err = await res.json().catch(() => ({}));
+        showToast(err.detail || 'Erro ao adicionar step', 'error');
+        btn.disabled = false;
+        btn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg> Adicionar Step ao Roteiro';
+    }
+});
+
+// ── Delete Step ──
+async function deleteStep(stepId) {
+    if (!confirm('Excluir este step?')) return;
+    const res = await fetch(`/api/campaigns/${CAMPAIGN_ID}/steps/${stepId}`, { method: 'DELETE' });
+    if (res.ok) {
+        showToast('Step excluído');
+        window.location.reload();
+    } else {
+        showToast('Erro ao excluir', 'error');
+    }
+}
+
+// ── Edit Step Modal ──
+let editStepMedia = []; // Current media entries for the step being edited
+
+function openEditStep(btn) {
+    const stepId = btn.dataset.stepId;
+    document.getElementById('edit-step-id').value = stepId;
+    document.getElementById('edit-step-type').value = btn.dataset.stepType || 'text';
+    document.getElementById('edit-step-content').value = btn.dataset.stepContent;
+    document.getElementById('edit-step-delay').value = parseInt(btn.dataset.stepDelay);
+    const waitCheck = document.getElementById('edit-step-wait');
+    waitCheck.checked = btn.dataset.stepWait === 'true';
+    waitCheck.disabled = (parseInt(btn.dataset.stepOrder) === 0);
+
+    // Parse and render media files
+    try {
+        editStepMedia = JSON.parse(btn.dataset.stepMedia || '[]');
+    } catch { editStepMedia = []; }
+
+    const mediaSection = document.getElementById('edit-media-section');
+    const stepType = btn.dataset.stepType || 'text';
+    if (stepType !== 'text') {
+        mediaSection.classList.remove('hidden');
+        renderEditMediaList(stepId);
+    } else {
+        mediaSection.classList.add('hidden');
+    }
+
+    // Show/hide view once checkbox for image/video
+    const editViewOnceArea = document.getElementById('edit-view-once-area');
+    const editViewOnceCheck = document.getElementById('edit-step-viewonce');
+    if (stepType === 'image' || stepType === 'video') {
+        editViewOnceArea.classList.remove('hidden');
+        editViewOnceCheck.checked = btn.dataset.stepViewonce === 'true';
+    } else {
+        editViewOnceArea.classList.add('hidden');
+        editViewOnceCheck.checked = false;
+    }
+
+    // Clear file input
+    document.getElementById('edit-media-file').value = '';
+
+    document.getElementById('edit-step-modal').classList.remove('hidden');
+}
+
+function renderEditMediaList(stepId) {
+    const list = document.getElementById('edit-media-list');
+    if (editStepMedia.length === 0) {
+        list.innerHTML = '<p class="text-xs text-dark-500">Nenhum arquivo anexado.</p>';
+        return;
+    }
+    list.innerHTML = editStepMedia.map((entry, idx) => `
+        <div class="flex items-center justify-between p-2 bg-dark-900 border border-dark-700 rounded-lg">
+            <div class="flex items-center gap-2 min-w-0">
+                <svg class="w-3.5 h-3.5 text-dark-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/></svg>
+                <span class="text-xs text-dark-300 truncate" title="${entry.name}">${entry.name}</span>
+            </div>
+            <button type="button" onclick="removeEditMedia(${idx})" class="p-1 text-red-400 hover:bg-red-400/20 rounded transition-colors flex-shrink-0" title="Remover">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+        </div>
+    `).join('');
+}
+
+async function removeEditMedia(index) {
+    const stepId = document.getElementById('edit-step-id').value;
+    const res = await fetch(`/api/campaigns/${CAMPAIGN_ID}/steps/${stepId}/media/${index}`, { method: 'DELETE' });
+    if (res.ok) {
+        editStepMedia.splice(index, 1);
+        renderEditMediaList(stepId);
+        showToast('Arquivo removido');
+    } else {
+        showToast('Erro ao remover arquivo', 'error');
+    }
+}
+
+function closeEditStep() {
+    document.getElementById('edit-step-modal').classList.add('hidden');
+}
+
+document.getElementById('edit-step-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const stepId = document.getElementById('edit-step-id').value;
+    const btn = document.getElementById('edit-save-btn');
+    btn.disabled = true;
+    btn.innerHTML = '<svg class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg> Salvando...';
+
+    // First update text/delay/wait_reply
+    const data = {
+        content: document.getElementById('edit-step-content').value,
+        delay_seconds: parseInt(document.getElementById('edit-step-delay').value),
+        wait_reply: document.getElementById('edit-step-wait').checked,
+        view_once: document.getElementById('edit-step-viewonce').checked,
+    };
+    const res = await fetch(`/api/campaigns/${CAMPAIGN_ID}/steps/${stepId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+    });
+
+    // Then upload any new media files
+    const newFiles = document.getElementById('edit-media-file').files;
+    if (newFiles.length > 0 && res.ok) {
+        const formData = new FormData();
+        for (let i = 0; i < newFiles.length; i++) {
+            formData.append('media', newFiles[i]);
+        }
+        const mediaRes = await fetch(`/api/campaigns/${CAMPAIGN_ID}/steps/${stepId}/media`, {
+            method: 'POST',
+            body: formData
+        });
+        if (!mediaRes.ok) {
+            const err = await mediaRes.json().catch(() => ({}));
+            showToast(err.detail || 'Erro ao enviar arquivos', 'error');
+        }
+    }
+
+    if (res.ok) {
+        showToast('Step atualizado!');
+        window.location.reload();
+    } else {
+        showToast('Erro ao atualizar step', 'error');
+        btn.disabled = false;
+        btn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> Salvar';
+    }
+});
+
+// Close modal on backdrop click
+document.getElementById('edit-step-modal').addEventListener('click', (e) => {
+    if (e.target === e.currentTarget) closeEditStep();
+});
+
+// ── Context File ──
+async function uploadContextFile() {
+    const file = document.getElementById('context-file').files[0];
+    if (!file) { showToast('Selecione um arquivo mestre', 'error'); return; }
+    const formData = new FormData();
+    formData.append('file', file);
+    const res = await fetch(`/api/campaigns/${CAMPAIGN_ID}/context-file`, {
+        method: 'POST',
+        body: formData
+    });
+    if (res.ok) {
+        showToast('Arquivo de contexto enviado!');
+        window.location.reload();
+    } else {
+        const err = await res.json().catch(() => ({}));
+        showToast(err.detail || 'Erro ao enviar arquivo', 'error');
+    }
+}
+
+async function deleteContextFile() {
+    if (!confirm('Deseja mesmo remover a base de RAG?')) return;
+    const res = await fetch(`/api/campaigns/${CAMPAIGN_ID}/context-file`, { method: 'DELETE' });
+    if (res.ok) {
+        showToast('Arquivo removido');
+        window.location.reload();
+    } else {
+        showToast('Erro ao remover', 'error');
+    }
+}
+</script>
+{% endblock %}

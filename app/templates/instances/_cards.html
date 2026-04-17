@@ -1,0 +1,352 @@
+{% for instance in instances %}
+<div class="bg-dark-800 border border-dark-700 rounded-xl p-5 mb-4">
+    <div class="flex items-start justify-between">
+        <div class="flex items-center gap-3">
+            <div class="w-10 h-10 bg-dark-700 rounded-lg flex items-center justify-center">
+                <svg class="w-5 h-5 text-dark-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+            </div>
+            <div>
+                <h3 class="font-semibold text-dark-100">{{ instance.name }}</h3>
+                <p class="text-xs text-dark-400 mt-0.5">{{ instance.phone_number or 'Não conectado' }}</p>
+            </div>
+        </div>
+        <div class="flex items-center gap-2">
+            {% if instance.status == 'connected' %}
+            <span class="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-full bg-zap-500/10 text-zap-500">
+                <span class="w-1.5 h-1.5 bg-zap-500 rounded-full"></span> Conectado
+            </span>
+            <span id="antiban-badge-{{ instance.id }}" class="hidden flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium rounded-full"></span>
+            {% elif instance.status == 'connecting' %}
+            <span class="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-full bg-amber-500/10 text-amber-500">
+                <span class="w-1.5 h-1.5 bg-amber-500 rounded-full animate-pulse"></span> Conectando
+            </span>
+            {% else %}
+            <span class="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-full bg-red-500/10 text-red-500">
+                <span class="w-1.5 h-1.5 bg-red-500 rounded-full"></span> Desconectado
+            </span>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if instance.status == 'connecting' %}
+    <div class="mt-4 flex flex-col items-center p-4 bg-white rounded-lg mx-auto max-w-[280px]"
+         id="qr-container-{{ instance.id }}">
+        {% if instance.qrcode %}
+        <img src="{{ instance.qrcode }}" alt="QR Code" class="w-56 h-56" id="qr-img-{{ instance.id }}">
+        <p class="text-xs text-gray-500 mt-2">Escaneie com o WhatsApp</p>
+        {% else %}
+        <div class="w-56 h-56 flex flex-col items-center justify-center" id="qr-loading-{{ instance.id }}">
+            <svg class="animate-spin w-8 h-8 text-gray-400 mb-3" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+            <p class="text-xs text-gray-500">Gerando QR Code...</p>
+        </div>
+        <script>
+        (function() {
+            const instanceId = {{ instance.id }};
+            let attempts = 0;
+            const maxAttempts = 20;
+            const interval = setInterval(async () => {
+                attempts++;
+                if (attempts > maxAttempts) { clearInterval(interval); return; }
+                try {
+                    const res = await fetch(`/api/instances/${instanceId}/qrcode`);
+                    if (!res.ok) return;
+                    const data = await res.json();
+                    if (data.qrcode) {
+                        clearInterval(interval);
+                        const container = document.getElementById(`qr-container-${instanceId}`);
+                        if (container) {
+                            container.innerHTML = `<img src="${data.qrcode}" alt="QR Code" class="w-56 h-56"><p class="text-xs text-gray-500 mt-2">Escaneie com o WhatsApp</p>`;
+                        }
+                    }
+                } catch(e) { /* retry */ }
+            }, 3000);
+        })();
+        </script>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- Diagnostics Panel (collapsed by default) -->
+    <div id="diag-panel-{{ instance.id }}" class="hidden mt-4 bg-dark-900/50 border border-dark-700 rounded-lg p-4 space-y-3">
+        <div class="flex items-center justify-between">
+            <h4 class="text-xs font-bold text-dark-300 uppercase tracking-wider">Detalhes</h4>
+            <button onclick="document.getElementById('diag-panel-{{ instance.id }}').classList.add('hidden')"
+                    class="text-dark-500 hover:text-dark-300 transition-colors">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+        </div>
+
+        <!-- Health indicator -->
+        <div id="diag-health-{{ instance.id }}" class="flex items-center gap-2">
+            <svg class="animate-spin w-4 h-4 text-dark-500" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+            <span class="text-xs text-dark-400">Verificando...</span>
+        </div>
+
+        <!-- Stats grid (filled by JS) -->
+        <div id="diag-stats-{{ instance.id }}" class="hidden grid grid-cols-3 gap-2 text-center">
+        </div>
+
+        <!-- Anti-ban section (filled by JS) -->
+        <div id="diag-antiban-{{ instance.id }}" class="hidden"></div>
+
+        <!-- Alerts (filled by JS) -->
+        <div id="diag-alerts-{{ instance.id }}"></div>
+    </div>
+
+    <div class="flex items-center gap-2 mt-4 pt-4 border-t border-dark-700">
+        {% if instance.status != 'connected' %}
+        <button hx-post="/api/instances/{{ instance.id }}/reconnect" hx-swap="none"
+                onclick="showToast('Reconectando...', 'info'); setTimeout(()=>htmx.ajax('GET', '/api/instances/list-cards', {target: '#instances-list', swap: 'morphdom:innerHTML'}), 2000)"
+                class="px-3 py-1.5 text-xs font-medium text-dark-300 border border-dark-600 rounded-lg hover:bg-dark-700 transition-colors">
+            Reconectar
+        </button>
+        {% endif %}
+        <button onclick="runDiagnostic({{ instance.id }})"
+                class="px-3 py-1.5 text-xs font-medium text-dark-300 border border-dark-600 rounded-lg hover:bg-dark-700 transition-colors flex items-center gap-1.5"
+                title="Ver detalhes da instância">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            Detalhes
+        </button>
+        <button onclick="if(confirm('Excluir instância {{ instance.name }}?')) deleteInstance({{ instance.id }})"
+                class="px-3 py-1.5 text-xs font-medium text-red-400 border border-red-500/30 rounded-lg hover:bg-red-500/10 transition-colors ml-auto">
+            Excluir
+        </button>
+    </div>
+</div>
+{% else %}
+<div class="text-center py-12">
+    <svg class="w-12 h-12 text-dark-600 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+    <p class="text-dark-500">Nenhuma instância criada</p>
+    <p class="text-dark-600 text-sm mt-1">Clique em "+ Nova Instância" para começar</p>
+</div>
+{% endfor %}
+
+<script>
+async function deleteInstance(id) {
+    const res = await fetch(`/api/instances/${id}`, { method: 'DELETE' });
+    if (res.ok) {
+        showToast('Instância excluída');
+        htmx.ajax('GET', '/api/instances/list-cards', {target: '#instances-list', swap: 'morphdom:innerHTML'});
+    }
+}
+
+async function runDiagnostic(id) {
+    const panel = document.getElementById(`diag-panel-${id}`);
+    const healthEl = document.getElementById(`diag-health-${id}`);
+    const statsEl = document.getElementById(`diag-stats-${id}`);
+    const antibanEl = document.getElementById(`diag-antiban-${id}`);
+    const alertsEl = document.getElementById(`diag-alerts-${id}`);
+
+    // Show panel with loading state
+    panel.classList.remove('hidden');
+    healthEl.innerHTML = '<svg class="animate-spin w-4 h-4 text-dark-500" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg><span class="text-xs text-dark-400">Verificando...</span>';
+    statsEl.classList.add('hidden');
+    antibanEl.classList.add('hidden');
+    antibanEl.innerHTML = '';
+    alertsEl.innerHTML = '';
+
+    try {
+        const res = await fetch(`/api/instances/${id}/health`);
+        if (!res.ok) throw new Error('Falha ao obter diagnóstico');
+        const data = await res.json();
+
+        // Health badge
+        const colors = { ok: 'text-zap-500 bg-zap-500/10', warning: 'text-amber-500 bg-amber-500/10', critical: 'text-red-500 bg-red-500/10' };
+        const labels = { ok: 'Saudável', warning: 'Atenção', critical: 'Crítico' };
+        const c = colors[data.health] || colors.warning;
+        const l = labels[data.health] || 'Desconhecido';
+        healthEl.innerHTML = `<span class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold rounded-full ${c}"><span class="w-1.5 h-1.5 rounded-full bg-current"></span>${l}</span>`;
+
+        // Stats
+        const uptime = data.connected_since ? formatUptime(data.connected_since) : '—';
+        statsEl.innerHTML = `
+            <div class="bg-dark-800 rounded-lg p-2 border border-dark-700/50">
+                <p class="text-[10px] text-dark-500 uppercase font-bold">Contatos</p>
+                <p class="text-sm text-dark-200 font-medium mt-0.5">${data.contacts_count || 0}</p>
+            </div>
+            <div class="bg-dark-800 rounded-lg p-2 border border-dark-700/50">
+                <p class="text-[10px] text-dark-500 uppercase font-bold">Reconexões</p>
+                <p class="text-sm text-dark-200 font-medium mt-0.5">${data.restart_attempts || 0}</p>
+            </div>
+            <div class="bg-dark-800 rounded-lg p-2 border border-dark-700/50">
+                <p class="text-[10px] text-dark-500 uppercase font-bold">Conectado há</p>
+                <p class="text-sm text-dark-200 font-medium mt-0.5">${uptime}</p>
+            </div>`;
+        statsEl.classList.remove('hidden');
+
+        // Anti-ban section
+        if (data.antiban) {
+            const ab = data.antiban;
+            const rl = ab.rateLimiter || {};
+            const riskColors = { low: 'text-zap-500 bg-zap-500/10', medium: 'text-amber-500 bg-amber-500/10', high: 'text-orange-500 bg-orange-500/10', critical: 'text-red-500 bg-red-500/10' };
+            const riskLabels = { low: 'Baixo', medium: 'Médio', high: 'Alto', critical: 'Crítico' };
+            const rc = riskColors[ab.riskLevel] || riskColors.low;
+            const rlabel = riskLabels[ab.riskLevel] || 'Baixo';
+
+            let pauseBtn = '';
+            if (ab.paused) {
+                pauseBtn = `<button onclick="resumeAntiban(${id})" class="ml-2 px-2 py-0.5 text-[10px] font-medium text-white bg-zap-500 hover:bg-zap-600 rounded transition-colors">Retomar envio</button>`;
+            }
+
+            antibanEl.innerHTML = `
+                <div class="bg-dark-800 border border-dark-700/50 rounded-lg p-3">
+                    <div class="flex items-center justify-between mb-2">
+                        <h5 class="text-[10px] text-dark-500 uppercase font-bold">🛡️ Anti-Ban</h5>
+                        <div class="flex items-center">
+                            <span class="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold rounded-full ${rc}">
+                                Risco: ${rlabel} (${ab.riskScore || 0})
+                            </span>
+                            ${pauseBtn}
+                        </div>
+                    </div>
+                    ${ab.paused ? '<div class="mb-2 px-2 py-1.5 bg-red-500/10 border border-red-500/20 rounded text-xs text-red-400 font-medium">⏸️ Envio pausado automaticamente — risco elevado de banimento</div>' : ''}
+                    <div class="grid grid-cols-4 gap-2 text-center">
+                        <div class="bg-dark-900/50 rounded p-1.5">
+                            <p class="text-[9px] text-dark-500 uppercase font-bold">Msgs/min</p>
+                            <p class="text-xs text-dark-200 font-medium">${rl.messagesLastMinute || 0}</p>
+                        </div>
+                        <div class="bg-dark-900/50 rounded p-1.5">
+                            <p class="text-[9px] text-dark-500 uppercase font-bold">Msgs/hora</p>
+                            <p class="text-xs text-dark-200 font-medium">${rl.messagesLastHour || 0}</p>
+                        </div>
+                        <div class="bg-dark-900/50 rounded p-1.5">
+                            <p class="text-[9px] text-dark-500 uppercase font-bold">Msgs/dia</p>
+                            <p class="text-xs text-dark-200 font-medium">${rl.messagesLastDay || 0}</p>
+                        </div>
+                        <div class="bg-dark-900/50 rounded p-1.5">
+                            <p class="text-[9px] text-dark-500 uppercase font-bold">Alertas RL</p>
+                            <p class="text-xs text-dark-200 font-medium">${rl.totalBlocked || 0}</p>
+                        </div>
+                    </div>
+                    ${(ab.disconnectsLastHour > 0 || ab.failedMessagesLastHour > 0) ? `
+                    <div class="flex gap-3 mt-2 text-[10px] text-dark-500">
+                        ${ab.disconnectsLastHour > 0 ? `<span>⚡ ${ab.disconnectsLastHour} desconexões/hora</span>` : ''}
+                        ${ab.failedMessagesLastHour > 0 ? `<span>❌ ${ab.failedMessagesLastHour} falhas/hora</span>` : ''}
+                    </div>` : ''}
+                </div>`;
+            antibanEl.classList.remove('hidden');
+        }
+
+        // Last error
+        if (data.last_error) {
+            alertsEl.innerHTML += `<div class="bg-dark-800 border border-dark-700/50 rounded-lg p-3 mb-2">
+                <p class="text-[10px] text-dark-500 uppercase font-bold mb-1">Último erro</p>
+                <p class="text-xs text-dark-400 font-mono break-all">${escapeHtml(data.last_error)}</p>
+            </div>`;
+        }
+
+        // Diagnostic alerts
+        if (data.diagnostics && data.diagnostics.length) {
+            for (const diag of data.diagnostics) {
+                const isCritical = diag.type === 'bad_mac' || diag.type === 'failed';
+                const borderColor = isCritical ? 'border-red-500/30' : 'border-amber-500/30';
+                const bgColor = isCritical ? 'bg-red-500/5' : 'bg-amber-500/5';
+                const textColor = isCritical ? 'text-red-400' : 'text-amber-400';
+                const iconColor = isCritical ? 'text-red-400' : 'text-amber-400';
+
+                let actionBtn = '';
+                if (diag.action === 'reset_auth') {
+                    actionBtn = `<button onclick="resetAuth(${id})" class="mt-2 px-3 py-1.5 text-xs font-medium text-white bg-red-500 hover:bg-red-600 rounded-lg transition-colors flex items-center gap-1.5">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                        Limpar sessão e reconectar
+                    </button>`;
+                } else if (diag.action === 'reconnect') {
+                    actionBtn = `<button hx-post="/api/instances/${id}/reconnect" hx-swap="none" onclick="showToast('Reconectando...', 'info'); setTimeout(()=>htmx.ajax('GET', '/api/instances/list-cards', {target: '#instances-list', swap: 'morphdom:innerHTML'}), 2000)" class="mt-2 px-3 py-1.5 text-xs font-medium text-dark-100 bg-dark-700 hover:bg-dark-600 rounded-lg transition-colors border border-dark-600">Reconectar</button>`;
+                }
+
+                alertsEl.innerHTML += `<div class="${bgColor} ${borderColor} border rounded-lg p-3 mb-2">
+                    <div class="flex items-start gap-2">
+                        <svg class="w-4 h-4 ${iconColor} mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z"/></svg>
+                        <div class="flex-1">
+                            <p class="text-xs ${textColor} font-medium">${escapeHtml(diag.message)}</p>
+                            ${actionBtn}
+                        </div>
+                    </div>
+                </div>`;
+            }
+        }
+
+        if (!data.diagnostics?.length && !data.last_error) {
+            alertsEl.innerHTML = '<p class="text-xs text-dark-500">Nenhum problema detectado.</p>';
+        }
+
+    } catch (err) {
+        healthEl.innerHTML = '<span class="text-xs text-red-400">Erro ao obter diagnóstico</span>';
+    }
+}
+
+async function resumeAntiban(id) {
+    try {
+        const res = await fetch(`/api/instances/${id}/antiban/resume`, { method: 'POST' });
+        if (res.ok) {
+            showToast('Envio de mensagens retomado', 'success');
+            runDiagnostic(id);
+        } else {
+            const data = await res.json();
+            showToast(data.detail || 'Erro ao retomar', 'error');
+        }
+    } catch { showToast('Erro de conexão', 'error'); }
+}
+
+async function resetAuth(id) {
+    if (!confirm('Isso irá limpar toda a sessão de criptografia e exigir um novo escaneamento de QR Code.\n\nUse esta opção se as mensagens estão chegando ilegíveis ("Aguardando mensagem...") ou se há erro de Bad MAC.\n\nDeseja continuar?')) return;
+
+    showToast('Limpando sessão e gerando novo QR...', 'info');
+    try {
+        const res = await fetch(`/api/instances/${id}/reset-auth`, { method: 'POST' });
+        if (res.ok) {
+            showToast('Sessão redefinida! Escaneie o novo QR Code.', 'success');
+            setTimeout(() => htmx.ajax('GET', '/api/instances/list-cards', {target: '#instances-list', swap: 'morphdom:innerHTML'}), 1500);
+        } else {
+            const data = await res.json();
+            showToast(data.detail || 'Erro ao redefinir sessão', 'error');
+        }
+    } catch { showToast('Erro de conexão', 'error'); }
+}
+
+function formatUptime(connectedSince) {
+    if (!connectedSince) return '—';
+    const ms = Date.now() - connectedSince;
+    const mins = Math.floor(ms / 60000);
+    if (mins < 60) return `${mins}min`;
+    const hours = Math.floor(mins / 60);
+    if (hours < 24) return `${hours}h ${mins % 60}m`;
+    const days = Math.floor(hours / 24);
+    return `${days}d ${hours % 24}h`;
+}
+
+function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+}
+
+// Auto-fetch anti-ban badge for connected instances
+(function() {
+    const connectedIds = [{% for instance in instances %}{% if instance.status == 'connected' %}{{ instance.id }},{% endif %}{% endfor %}];
+    connectedIds.forEach(async (id) => {
+        try {
+            const res = await fetch(`/api/instances/${id}/health`);
+            if (!res.ok) return;
+            const data = await res.json();
+            const badge = document.getElementById(`antiban-badge-${id}`);
+            if (!badge || !data.antiban) return;
+            const ab = data.antiban;
+            const rl = ab.rateLimiter || {};
+            const colors = { low: 'bg-zap-500/10 text-zap-500', medium: 'bg-amber-500/10 text-amber-500', high: 'bg-orange-500/10 text-orange-500', critical: 'bg-red-500/10 text-red-500' };
+            const icons = { low: '🛡️', medium: '⚠️', high: '🔶', critical: '🚨' };
+            const c = colors[ab.riskLevel] || colors.low;
+            const icon = icons[ab.riskLevel] || '🛡️';
+            if (ab.paused) {
+                badge.className = `flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium rounded-full bg-red-500/10 text-red-400`;
+                badge.textContent = `⏸️ Pausado`;
+            } else {
+                badge.className = `flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium rounded-full ${c}`;
+                badge.textContent = `${icon} ${rl.messagesLastDay || 0} msgs`;
+            }
+            badge.classList.remove('hidden');
+        } catch {}
+    });
+})();
+</script>
+

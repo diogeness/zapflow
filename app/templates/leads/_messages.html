@@ -1,0 +1,37 @@
+{% for msg in messages %}
+<div class="flex {% if msg.direction == 'outbound' %}justify-end{% else %}justify-start{% endif %}">
+    <div class="max-w-[75%] {% if msg.direction == 'outbound' %}chat-bubble-out{% else %}chat-bubble-in{% endif %} px-4 py-2.5
+        {% if msg.direction == 'inbound' %}bg-dark-700
+        {% elif msg.is_from_ai %}bg-blue-600/20 border border-blue-500/30
+        {% else %}bg-zap-600/20 border border-zap-500/30
+        {% endif %}">
+
+        {% if msg.direction == 'outbound' %}
+        <div class="flex items-center gap-1.5 mb-1">
+            {% if msg.is_from_ai %}
+            <span class="text-[10px] text-blue-400 font-medium">🤖 IA</span>
+            {% else %}
+            <span class="text-[10px] text-zap-400 font-medium">📋 Roteiro</span>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        {% if msg.message_type == 'audio' %}
+        <p class="text-xs text-dark-400 italic mb-1">🎤 [Áudio transcrito]</p>
+        {% elif msg.message_type == 'image' %}
+        <p class="text-xs text-dark-400 italic mb-1">🖼️ [Imagem]</p>
+        {% elif msg.message_type == 'document' %}
+        <p class="text-xs text-dark-400 italic mb-1">📄 [Documento]</p>
+        {% endif %}
+
+        <p class="text-sm text-dark-100 whitespace-pre-wrap">{{ msg.content }}</p>
+        <p class="text-[10px] text-dark-500 mt-1 {% if msg.direction == 'outbound' %}text-right{% endif %}">
+            {{ msg.created_at|brtime }}
+        </p>
+    </div>
+</div>
+{% else %}
+<div class="flex items-center justify-center h-full text-dark-500 text-sm">
+    Nenhuma mensagem ainda
+</div>
+{% endfor %}

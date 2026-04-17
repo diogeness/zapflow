@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}ZapFlow — Leads{% endblock %}
+{% block page_title %}Leads{% endblock %}
+
+{% block content %}
+<div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+    <p class="text-dark-400 text-sm">Monitore conversas e leads</p>
+    <div class="flex flex-wrap items-center gap-3">
+        <input type="text" id="search-input" placeholder="Buscar por nome ou telefone..."
+               class="px-3 py-2 bg-dark-800 border border-dark-700 rounded-lg text-dark-100 text-sm focus:outline-none focus:ring-2 focus:ring-zap-500 w-64"
+               hx-get="/api/leads/table" hx-trigger="keyup changed delay:300ms" hx-target="#leads-table" 
+               hx-include="[name='filter_campaign'],[name='filter_status'],[name='filter_interest'],[name='filter_date']" name="search">
+        
+        <select name="filter_campaign" class="px-3 py-2 bg-dark-800 border border-dark-700 rounded-lg text-dark-100 text-sm focus:outline-none focus:ring-2 focus:ring-zap-500"
+                hx-get="/api/leads/table" hx-trigger="change" hx-target="#leads-table" 
+                hx-include="#search-input,[name='filter_status'],[name='filter_interest'],[name='filter_date']">
+            <option value="">Todas campanhas</option>
+            {% for c in campaigns %}
+            <option value="{{ c.id }}">{{ c.name }}</option>
+            {% endfor %}
+        </select>
+
+        <select name="filter_status" class="px-3 py-2 bg-dark-800 border border-dark-700 rounded-lg text-dark-100 text-sm focus:outline-none focus:ring-2 focus:ring-zap-500"
+                hx-get="/api/leads/table" hx-trigger="change" hx-target="#leads-table" 
+                hx-include="#search-input,[name='filter_campaign'],[name='filter_interest'],[name='filter_date']">
+            <option value="">Todos status</option>
+            <option value="active">Ativos</option>
+            <option value="completed">Completos</option>
+            <option value="paused">Pausados</option>
+            <option value="blocked">Bloqueados</option>
+        </select>
+
+        <select name="filter_interest" class="px-3 py-2 bg-dark-800 border border-dark-700 rounded-lg text-dark-100 text-sm focus:outline-none focus:ring-2 focus:ring-zap-500"
+                hx-get="/api/leads/table" hx-trigger="change" hx-target="#leads-table" 
+                hx-include="#search-input,[name='filter_campaign'],[name='filter_status'],[name='filter_date']">
+            <option value="">Todos interesses</option>
+            <option value="hot">🔥 Hot</option>
+            <option value="warm">Warm</option>
+            <option value="cold">Cold</option>
+            <option value="unresponsive">Sem resposta</option>
+        </select>
+
+        <select name="filter_date" class="px-3 py-2 bg-dark-800 border border-dark-700 rounded-lg text-dark-100 text-sm focus:outline-none focus:ring-2 focus:ring-zap-500"
+                hx-get="/api/leads/table" hx-trigger="change" hx-target="#leads-table" 
+                hx-include="#search-input,[name='filter_campaign'],[name='filter_status'],[name='filter_interest']">
+            <option value="">Qualquer data</option>
+            <option value="today">Hoje</option>
+            <option value="yesterday">Ontem</option>
+            <option value="last_7">Últimos 7 dias</option>
+            <option value="last_30">Últimos 30 dias</option>
+        </select>
+
+        <a href="/leads/export" class="px-3 py-2 text-xs font-medium text-dark-300 border border-dark-600 rounded-lg hover:bg-dark-700 transition-colors whitespace-nowrap">
+            📥 CSV
+        </a>
+    </div>
+</div>
+
+<div class="bg-dark-800 border border-dark-700 rounded-xl overflow-hidden">
+    <div id="leads-table" hx-get="/api/leads/table" hx-trigger="load, every 10s, updateLeads from:body" hx-swap="innerHTML" hx-include="#search-input,[name='filter_campaign'],[name='filter_status'],[name='filter_interest'],[name='filter_date']">
+        <div class="flex items-center justify-center py-12">
+            <svg class="animate-spin w-6 h-6 text-dark-500" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+        </div>
+    </div>
+</div>
+{% endblock %}

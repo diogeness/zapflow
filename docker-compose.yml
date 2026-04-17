@@ -1,0 +1,67 @@
+services:
+  app:
+    build: .
+    container_name: zapflow_app
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    env_file: .env
+    volumes:
+      - ./data:/app/data
+    depends_on:
+      wa-service:
+        condition: service_healthy
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
+    networks:
+      - zapflow
+
+  wa-service:
+    build: ./whatsapp-service
+    container_name: zapflow_whatsapp
+    restart: unless-stopped
+    environment:
+      - API_KEY=${WA_SERVICE_API_KEY:-}
+      - WEBHOOK_URL=${WA_WEBHOOK_CALLBACK_URL:-http://app:8000}/api/webhooks/waha
+      - SESSIONS_DIR=/data/sessions
+      - MEDIA_DIR=/data/media
+      - PORT=3100
+    volumes:
+      - whatsapp_sessions:/data/sessions
+      - ./data/media:/data/media
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3100/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - zapflow
+
+  # Optional: Cloudflare Tunnel for secure external access
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: zapflow_tunnel
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run
+    environment:
+      - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN:-}
+    depends_on:
+      - app
+    profiles:
+      - tunnel
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - zapflow
+
+volumes:
+  whatsapp_sessions:
+
+networks:
+  zapflow:
+    driver: bridge

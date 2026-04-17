@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ZapFlow — Login</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = { darkMode: 'class', theme: { extend: { colors: {
+            zap: { 500:'#22c55e',600:'#16a34a' },
+            dark: { 900:'#0f172a',800:'#1e293b',700:'#334155',400:'#94a3b8',300:'#cbd5e1',100:'#f1f5f9' }
+        }}}}
+    </script>
+</head>
+<body class="h-full bg-dark-900 dark flex items-center justify-center">
+    <div class="w-full max-w-md px-6">
+        <div class="text-center mb-8">
+            <div class="inline-flex items-center justify-center w-16 h-16 bg-zap-500 rounded-2xl mb-4">
+                <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+            </div>
+            <h1 class="text-3xl font-bold text-dark-100">ZapFlow</h1>
+            <p class="text-dark-400 mt-1">Automação WhatsApp Multi-Conta</p>
+        </div>
+
+        <div class="bg-dark-800 rounded-2xl border border-dark-700 p-8">
+            <div id="login-error" class="hidden mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-sm"></div>
+
+            <form id="login-form" class="space-y-5">
+                <div>
+                    <label class="block text-sm font-medium text-dark-300 mb-1.5">Usuário</label>
+                    <input type="text" name="username" required autocomplete="username"
+                           class="w-full px-4 py-2.5 bg-dark-900 border border-dark-700 rounded-lg text-dark-100 placeholder-dark-500 focus:outline-none focus:ring-2 focus:ring-zap-500 focus:border-transparent transition"
+                           placeholder="admin">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-dark-300 mb-1.5">Senha</label>
+                    <input type="password" name="password" required autocomplete="current-password"
+                           class="w-full px-4 py-2.5 bg-dark-900 border border-dark-700 rounded-lg text-dark-100 placeholder-dark-500 focus:outline-none focus:ring-2 focus:ring-zap-500 focus:border-transparent transition"
+                           placeholder="••••••••">
+                </div>
+                <button type="submit" id="login-btn"
+                        class="w-full py-2.5 bg-zap-500 hover:bg-zap-600 text-white font-semibold rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-zap-500 focus:ring-offset-2 focus:ring-offset-dark-900">
+                    Entrar
+                </button>
+            </form>
+        </div>
+        <p class="text-center text-dark-500 text-xs mt-6">ZapFlow v0.1.0</p>
+    </div>
+
+    <script>
+        document.getElementById('login-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const form = e.target;
+            const btn = document.getElementById('login-btn');
+            const errorDiv = document.getElementById('login-error');
+
+            btn.disabled = true;
+            btn.textContent = 'Entrando...';
+            errorDiv.classList.add('hidden');
+
+            const data = {
+                username: form.username.value,
+                password: form.password.value
+            };
+
+            try {
+                const res = await fetch('/api/auth/token', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+
+                if (res.ok) {
+                    window.location.href = '/';
+                } else {
+                    const err = await res.json();
+                    errorDiv.textContent = err.detail || 'Credenciais inválidas';
+                    errorDiv.classList.remove('hidden');
+                }
+            } catch {
+                errorDiv.textContent = 'Erro de conexão';
+                errorDiv.classList.remove('hidden');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Entrar';
+            }
+        });
+    </script>
+</body>
+</html>

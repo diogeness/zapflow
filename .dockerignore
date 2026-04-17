@@ -1,0 +1,10 @@
+data/
+whatsapp-service/
+.env
+.git/
+__pycache__/
+*.pyc
+*.db
+*.db-journal
+.venv/
+node_modules/
