@@ -37,4 +37,4 @@ class GroqWhisperClient:
                 return text
             except Exception as e:
                 logger.error("groq.whisper_error", error=str(e))
-                return "[Erro na transcrição do áudio]"
+                return "[Error transcribing audio]"
