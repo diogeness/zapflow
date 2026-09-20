@@ -57,15 +57,15 @@ class GroqLLMClient:
         await self._rate_limit()
 
         system = (
-            "Você é um analista de vendas. Analise o histórico de conversa e retorne EXATAMENTE no formato:\n"
-            "RESUMO: (2 frases descrevendo o interesse do cliente)\n"
-            "NIVEL: (hot|warm|cold|unresponsive)\n"
-            "INTERESSE: (produto ou serviço de interesse, ou 'indefinido')\n\n"
-            "Regras para o nível:\n"
-            "- hot: demonstrou interesse claro, pediu preço, quer fechar\n"
-            "- warm: fez perguntas, mostrou curiosidade mas sem decisão\n"
-            "- cold: respondeu sem interesse ou deu respostas curtas\n"
-            "- unresponsive: não respondeu ou abandonou a conversa"
+            "You are a sales analyst. Analyze the conversation history and return EXACTLY in the following format:\n"
+            "SUMMARY: (2 short sentences describing the customer's interest)\n"
+            "LEVEL: (hot|warm|cold|unresponsive)\n"
+            "INTEREST: (product or service of interest, or 'undefined')\n\n"
+            "Rules for LEVEL:\n"
+            "- hot: clear intent to buy (asked for price, wants to close)\n"
+            "- warm: asked questions or showed curiosity but no decision yet\n"
+            "- cold: uninterested or gave short answers\n"
+            "- unresponsive: did not reply or abandoned the conversation"
         )
 
         messages = [{"role": "system", "content": system}]
@@ -93,4 +93,4 @@ class GroqLLMClient:
             return result
         except Exception as e:
             logger.error("groq.tabulation_error", error=str(e))
-            return {"tabulation": "Erro na tabulação", "interest_level": "unresponsive"}
+            return {"tabulation": "Tabulation error", "interest_level": "unresponsive"}
